@@ -74,160 +74,143 @@ LPH_JIT_ULTRA(function()
 	----------------
 
 	----Bypass-----
-	local Players = game:GetService("Players")
-	local RunService = game:GetService("RunService")
-	local StarterGui = game:GetService("StarterGui")
-	local UserInputService = game:GetService("UserInputService")
-	local mouse = Players.LocalPlayer:GetMouse()
-	local nevermore_modules = rawget(require(game.ReplicatedStorage.Framework.Nevermore), "_lookupTable")
-	local network = rawget(nevermore_modules, "Network") -- network is the place where the remote handling shit is
-	local remotes_table = getupvalue(getsenv(network).GetEventHandler, 1)
-	local events_table = getupvalue(getsenv(network).GetFunctionHandler, 1)
-	local remotes = {}
+	
 
 	LPH_NO_VIRTUALIZE(function()
-		local Players = game:GetService("Players")
-		local Player = Players.LocalPlayer
-
-		local OldNameCall 
-		OldNameCall = hookmetamethod(game, "__namecall", function(...) 
-			local Self, Args = (...), ({select(2, ...)})
-
-			if getnamecallmethod() == "Kick" and Self == Player then 
-				return
-			end
-
-			return OldNameCall(...)
-		end)
-
-		game:GetService("ScriptContext"):SetTimeout(0)
-
-		setmetatable(remotes, {
-			__call = function(table2, ...)
-				local args = {...}
-
-				table.foreach(args, print)
-
-				table2[args[1]]:FireServer(args[2])
-			end
-		})
-
-		do
-			for i, v in pairs(remotes_table) do
-				-- index is name, value is info table
-				remotes[i] = rawget(v, "Remote")
-			end
-			for i, v in pairs(events_table) do
-				-- index is name, value is info table
-				remotes[i] = rawget(v, "Remote")
-			end
-		end
-
-
-		for i,v in pairs(getgc(true)) do
-			if type(v) == "table" and rawget(v,"Remote") then
-				v.Remote.Name = v.Name
-			end
-		end
-
-		for i, v in pairs(getconnections(game:GetService("Players").LocalPlayer.Character.Humanoid:GetPropertyChangedSignal("Jump"))) do
-			v:Disable()
-		end
-		for i, v in pairs(getconnections(game:GetService("Players").LocalPlayer.Character.Humanoid:GetPropertyChangedSignal("WalkSpeed"))) do
-			v:Disable()
-		end
-		for i, v in pairs(getconnections(game:GetService("Players").LocalPlayer.Character.Humanoid:GetPropertyChangedSignal("JumpPower"))) do
-			v:Disable()
-		end
-		for i, v in pairs(getconnections(game:GetService("Players").LocalPlayer.Character.Humanoid:GetPropertyChangedSignal("HipHeight"))) do
-			v:Disable()
-		end
-		-- 	local mt = getrawmetatable(game)
-		-- 	setreadonly(mt,false)
-		-- 	local old = mt.__index
-		-- 	mt.__index = newcclosure(function(self,a)
-		-- 		if a == "WalkSpeed" then 
-		-- 			return 16
-		-- 		end
-		-- 		if a == "JumpPower" then 
-		-- 			return 50
-		-- 		end
-		-- 		if a == "HipHeight" then 
-		-- 			return 2
-		-- 		end
-		-- 		return old(self,a)
-		-- 	end)
-
-		for _, Connection in next, getconnections(game:GetService("ScriptContext").Error) do
+		game:GetService("RunService").RenderStepped:Connect(function()
+			for _, Connection in next, getconnections(game:GetService("ScriptContext").Error) do
 			Connection:Disable()
-		end
-
-		for _, Connection in next, getconnections(game:GetService("LogService").MessageOut) do
+			end
+			
+			for _, Connection in next, getconnections(game:GetService("LogService").MessageOut) do
 			Connection:Disable()
-		end
-		local h = game.Players.LocalPlayer.Character.Humanoid
-		local current_ws = 16
-		for i,v in pairs(getconnections(h.Changed)) do v:Disable() end
-		local mt = getrawmetatable(game)
-		setreadonly(mt,false)
-		local backup = mt.__index
-		local backup2 = mt.__newindex
-		mt.__index = newcclosure(function(tbl,idx)
-			if checkcaller() then return backup(tbl,idx) end
-			if tbl == h and idx == "WalkSpeed" then
-				return current_ws
 			end
-			return backup(tbl,idx)
-		end)
-		mt.__newindex = newcclosure(function(tbl,idx,val)
-			if checkcaller() then return backup2(tbl,idx,val) end
-			if tbl == h and idx == "WalkSpeed" then
-				current_ws = val
-				return os.time()
+			end)
+			
+			for _, tbl in ipairs(getgc(true)) do
+			if typeof(tbl) == "table" and rawget(tbl, "Remote") then
+			tbl.Remote.Name = tbl.Name
 			end
-			return backup2(tbl,idx,val)
-		end)
-		setreadonly(mt,true)
-
-		for i,v in pairs(getgc(true)) do
-			if typeof(v) ~= 'table' then continue end
-			if rawget(v, 'getIsBodyMoverCreatedByGame') then
-				v.getIsBodyMoverCreatedByGame = function(gg)
-					return true
-				end
-
 			end
-			if typeof(v) == "table" and rawget(v, "kick") then
-				v.kick =  function()
-					return
-				end
-			end
-
-			if typeof(v) == "table" and rawget(v, "randomDelayKick") then
-				v.randomDelayKick = function()
-					return wait(9e9)
-				end
-			end
-			if rawget(v, 'connectCharacter') then
-				v.connectCharacter = function(gg) return wait(9e9) end
-			end
-
-
-			if rawget(v, "punish") then
-				local hf;hf=hookfunction(v.punish, function(...)
-					return
-				end)
-			end
-		end
-
-		local modules = {}
-		for i,v in pairs(rawget(require(game:GetService("ReplicatedStorage").Framework.Nevermore), "_lookupTable")) do
-			modules[i] = require(v)
-		end
-
-		hookfunction(modules["AntiCheatHandlerClient"]._startModule, function(...)
+			local local_player = game:GetService("Players").LocalPlayer
+			local kick_hook; kick_hook = hookmetamethod(game, "__namecall", newcclosure(function(...)
+			local args = {...}
+			local self = args[1]
+			local namecall_method = getnamecallmethod()
+			if not checkcaller() and self == local_player and namecall_method == "Kick" then
 			return
-		end)
+			end
+			return kick_hook(...)
+			end))
+			
+			for i, v in pairs(getconnections(game:GetService("Players").LocalPlayer.Character.Humanoid:GetPropertyChangedSignal("Jump"))) do
+			v:Disable()
+			end
+			for i, v in pairs(getconnections(game:GetService("Players").LocalPlayer.Character.Humanoid:GetPropertyChangedSignal("WalkSpeed"))) do
+			v:Disable()
+			end
+			for i, v in pairs(getconnections(game:GetService("Players").LocalPlayer.Character.Humanoid:GetPropertyChangedSignal("JumpPower"))) do
+			v:Disable()
+			end
+			for i, v in pairs(getconnections(game:GetService("Players").LocalPlayer.Character.Humanoid:GetPropertyChangedSignal("HipHeight"))) do
+			v:Disable()
+			end
+			
+			local mt = getrawmetatable(game)
+			setreadonly(mt,false)
+			local old = mt.__index
+			mt.__index = newcclosure(function(self,a)
+			if a == "WalkSpeed" then 
+			return 16
+			end
+			if a == "JumpPower" then 
+			return 50
+			end
+			if a == "HipHeight" then 
+			return 2
+			end
+			return old(self,a)
+			end)
+			
+			
+			
+			
+			function getEvent(name)
+			for i, v in ipairs(game:GetService("ReplicatedStorage").Communication.Events:GetChildren()) do
+			if v.Name == name then
+			return v
+			end
+			end
+			end
+			
+			function getFunction(name)
+			for i, v in ipairs(game:GetService("ReplicatedStorage").Communication.Functions:GetChildren()) do
+			if v.Name == name then
+			return v
+			end
+			end
+			end
+			
+			local runService = game:GetService("RunService")
+			local event = runService.RenderStepped:Connect(function()
+			if game:GetService("Players").LocalPlayer.Character then
+				for i, v in pairs(getconnections(game:GetService("Players").LocalPlayer.Character.Humanoid:GetPropertyChangedSignal("WalkSpeed"))) do
+			v:Disable()
+			end
+			end
+			end)
+			
+			local Remotes = {}
+			local NetworkEnvironment = getmenv(rawget(rawget(require(game.ReplicatedStorage.Framework.Nevermore), '_lookupTable'), 'Network'))
+			local EventsTable = debug.getupvalue(NetworkEnvironment.GetEventHandler, 1)
+			local FunctionsTable = debug.getupvalue(NetworkEnvironment.GetFunctionHandler, 1)
+			
+			local function AddRemotes(StorageTable)
+			for Name, Info in pairs(StorageTable) do
+			if rawget(Info, 'Remote') then
+			Remotes[rawget(Info, 'Remote')] = Name
+			end
+			end
+			end
+			AddRemotes(EventsTable)
+			AddRemotes(FunctionsTable)
+			
+			local Index
+			Index = hookmetamethod(game, '__index', function(Self, Key)
+			if checkcaller() and (Key == 'Name' or Key == 'name') and Remotes[Self] then
+			return Remotes[Self]
+			end
+			
+			return Index(Self, Key)
+			end)
+			
+			for a,b in next, getgc(true) do
+			if typeof(b) == 'function' then
+			if getinfo(b).name == 'punish' then
+			replaceclosure(b, function() return wait(9e9); end)
+			end
+			end
+			end
+			
+			--[[ANTI CHEAT BYPASS]]
+			
+			local old;
+			old = hookmetamethod(game,"__namecall",function(self,...)
+			local args = {...}
+			if self.Name == "LogKick" then 
+			return
+			end
+			return old(self, ...)
+			end)
+			
+			local old;
+			old = hookmetamethod(game,"__namecall",function(self,...)
+			local args = {...}
+			if self.Name == "CreateAntiCheatNotification" then 
+			return
+			end
+			return old(self, ...)
+			end)
 
 
 	end)()
