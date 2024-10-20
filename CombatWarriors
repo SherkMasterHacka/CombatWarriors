@@ -82,11 +82,20 @@ LPH_JIT_ULTRA(function()
 	local mouse = Players.LocalPlayer:GetMouse()
 	local nevermore_modules = rawget(require(game.ReplicatedStorage.Framework.Nevermore), "_lookupTable")
 	local network = rawget(nevermore_modules, "Network") -- network is the place where the remote handling shit is
-	local remotes_table = getupvalue(getsenv(network).GetEventHandler, 1)
 	local events_table = getupvalue(getsenv(network).GetFunctionHandler, 1)
 	local remotes = {}
 
 	LPH_NO_VIRTUALIZE(function()
+		local old;
+old = hookmetamethod(game,"__namecall",function(self,...)
+local args = {...}
+if self.Name == "LogKick" then 
+return
+end
+return old(self, ...)
+end)
+
+
 		for _, Connection in next, getconnections(game:GetService("ScriptContext").Error) do
 			Connection:Disable()
 		end
